@@ -1,0 +1,87 @@
+{% extends 'board/layout.html' %}
+
+{% block title %}创建剪贴板{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body p-4">
+                <h2 class="card-title text-center mb-4">
+                    <i class="fas fa-plus-circle text-primary me-2"></i>创建新剪贴板
+                </h2>
+                <form id="createBoardForm" method="POST">
+                    {% csrf_token %}
+                    <div id="errorAlert" class="alert alert-danger mb-3 d-none">
+                        <i class="fas fa-exclamation-circle me-2"></i>
+                        <span id="errorMessage"></span>
+                    </div>
+                    <div class="mb-3">
+                        <label for="identifier" class="form-label">标识符</label>
+                        <input type="text" class="form-control" id="identifier" name="identifier" required
+                               pattern="[a-zA-Z0-9-_]+" title="只能使用字母、数字、横线和下划线">
+                        <div class="form-text">创建一个唯一的标识符，用于访问您的剪贴板。</div>
+                    </div>
+                    <div class="mb-4">
+                        <label for="password" class="form-label">密码（可选）</label>
+                        <input type="password" class="form-control" id="password" name="password">
+                        <div class="form-text">如果设置密码，其他人需要输入密码才能访问剪贴板。</div>
+                    </div>
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="fas fa-check me-2"></i>创建剪贴板
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script>
+document.getElementById('createBoardForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const form = this;
+    const submitButton = form.querySelector('button[type="submit"]');
+    const errorAlert = document.getElementById('errorAlert');
+    const errorMessage = document.getElementById('errorMessage');
+    const identifier = document.getElementById('identifier').value;
+    const password = document.getElementById('password').value;
+
+    if (!identifier.match(/^[a-zA-Z0-9-_]+$/)) {
+        errorMessage.textContent = '标识符只能包含字母、数字、横线和下划线';
+        errorAlert.classList.remove('d-none');
+        return;
+    }
+
+    submitButton.disabled = true;
+    submitButton.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>创建中...';
+
+    fetch(form.action, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        },
+        body: new URLSearchParams(new FormData(form))
+    })
+    .then(response => response.json().catch(() => null).then(data => ({ ok: response.ok, data })))
+    .then(({ ok, data }) => {
+        if (!ok) {
+            throw new Error(data?.error || '创建剪贴板失败');
+        }
+        window.location.href = `/b/${identifier}`;
+    })
+    .catch(error => {
+        errorMessage.textContent = error.message;
+        errorAlert.classList.remove('d-none');
+    })
+    .finally(() => {
+        submitButton.disabled = false;
+        submitButton.innerHTML = '<i class="fas fa-check me-2"></i>创建剪贴板';
+    });
+});
+</script>
+{% endblock %}
+{% endblock %}
